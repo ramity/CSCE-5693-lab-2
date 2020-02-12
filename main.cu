@@ -19,11 +19,9 @@ int main (int argc, char *argv[])
     time_t t;
 
     // Initialize random number generator
-
     srand((unsigned) time(&t));
 
     // Initialize host variables
-
     printf("\nSetting up the problem..."); fflush(stdout);
     startTime(&timer);
 
@@ -62,9 +60,9 @@ int main (int argc, char *argv[])
         exit(0);
     }
 
-    A_sz = matArow*matAcol;
-    B_sz = matBrow*matBcol;
-    C_sz = matArow*matBcol;
+    A_sz = matArow * matAcol;
+    B_sz = matBrow * matBcol;
+    C_sz = matArow * matBcol;
 
     A_h = (float*) malloc( sizeof(float)*A_sz );
     for (unsigned int i=0; i < A_sz; i++) { A_h[i] = (rand()%100)/100.00; }
@@ -77,133 +75,79 @@ int main (int argc, char *argv[])
         matBrow, matBcol, matArow, matBcol);
 
     // Allocate device variables ----------------------------------------------
-
     printf("Allocating device variables..."); fflush(stdout);
     startTime(&timer);
 
     //INSERT CODE HERE
     cuda_ret = cudaMalloc((void**)&A_d, sizeof(float)*A_sz);
-    if(cuda_ret != cudaSuccess)
-    {
-        printf("\nFailed to allocate memory for A_d\n");
-        exit(-1);
-    }
+    if(cuda_ret != cudaSuccess){FATAL("Unable to allocate A_d device memory");}
 
     cuda_ret = cudaMalloc((void**)&B_d, sizeof(float)*B_sz);
-    if(cuda_ret != cudaSuccess)
-    {
-        printf("\nFailed to allocate memory for B_d\n");
-        exit(-1);
-    }
+    if(cuda_ret != cudaSuccess){FATAL("Unable to allocate B_d device memory");}
 
     cuda_ret = cudaMalloc((void**)&C_d, sizeof(float)*C_sz);
-    if(cuda_ret != cudaSuccess)
-    {
-        printf("\nFailed to allocate memory for C_d\n");
-        exit(-1);
-    }
+    if(cuda_ret != cudaSuccess){FATAL("Unable to allocate C_d device memory");}
     //END
 
     cuda_ret = cudaDeviceSynchronize();
-    if(cuda_ret != cudaSuccess)
-    {
-        printf("\nError synchronizing CUDA device\n");
-        exit(-1);
-    }
+    if(cuda_ret != cudaSuccess){FATAL("Error synchronizing CUDA device");}
     stopTime(&timer); printf("%f s\n", elapsedTime(timer));
 
     // Copy host variables to device ------------------------------------------
-
     printf("Copying data from host to device..."); fflush(stdout);
     startTime(&timer);
 
     //INSERT CODE HERE
     cuda_ret = cudaMemcpy(A_d, A_h, size, cudaMemcpyHostToDevice);
-    if(cuda_ret != cudaSuccess)
-    {
-        printf("\nError copying src (A_h) to dst (A_d) on CUDA device\n");
-        exit(-1);
-    }
+    if(cuda_ret != cudaSuccess){FATAL("Unable to copy A_h memory to device");}
 
     cuda_ret = cudaMemcpy(B_d, B_h, size, cudaMemcpyHostToDevice);
-    if(cuda_ret != cudaSuccess)
-    {
-        printf("\nError copying src (B_h) to dst (B_d) on CUDA device\n");
-        exit(01);
-    }
+    if(cuda_ret != cudaSuccess){FATAL("Unable to copy B_h memory to device");}
     // END
 
     cuda_ret = cudaDeviceSynchronize();
-    if(cuda_ret != cudaSuccess)
-    {
-        printf("\nError synchronizing CUDA device\n");
-        exit(-1);
-    }
+    if(cuda_ret != cudaSuccess){FATAL("Error synchronizing CUDA device");}
     stopTime(&timer); printf("%f s\n", elapsedTime(timer));
 
     // Launch kernel using standard sgemm interface ---------------------------
     printf("Launching kernel..."); fflush(stdout);
     startTime(&timer);
     basicSgemm('N', 'N', matArow, matBcol, matBrow, 1.0f, \
-		A_d, matArow, B_d, matBrow, 0.0f, C_d, matBrow);
+        A_d, matArow, B_d, matBrow, 0.0f, C_d, matBrow);
 
     cuda_ret = cudaDeviceSynchronize();
-	if(cuda_ret != cudaSuccess) FATAL("Unable to launch kernel");
+	if(cuda_ret != cudaSuccess){FATAL("Unable to launch kernel");}
     stopTime(&timer); printf("%f s\n", elapsedTime(timer));
 
     // Copy device variables from host ----------------------------------------
-
     printf("Copying data from device to host..."); fflush(stdout);
     startTime(&timer);
 
     //INSERT CODE HERE
     cuda_ret = cudaMemcpy(C_h, C_d, size, cudaMemcpyDeviceToHost);
-    if(cuda_ret != cudaSuccess)
-    {
-        printf("\nError copying src (C_d) to dst (C_h) on Host device\n");
-        exit(-1);
-    }
+    if(cuda_ret != cudaSuccess){FATAL("Error copying src (C_d) to dst (C_h) on Host device");}
     // END
 
     cuda_ret = cudaDeviceSynchronize();
-    if(cuda_ret != cudaSuccess)
-    {
-        printf("\nError synchronizing CUDA device\n");
-        exit(-1);
-    }
+    if(cuda_ret != cudaSuccess){FATAL("Error synchronizing CUDA device");}
     stopTime(&timer); printf("%f s\n", elapsedTime(timer));
 
     // Verify correctness -----------------------------------------------------
-
     printf("Verifying results..."); fflush(stdout);
-
     verify(A_h, B_h, C_h, matArow, matAcol, matBcol);
 
     // Free memory ------------------------------------------------------------
-
     free(A_h);
     free(B_h);
     free(C_h);
 
     //INSERT CODE HERE
     cuda_ret = cudaFree(A_d);
-    if(cuda_ret != cudaSuccess)
-    {
-        printf("\nError freeing A_d\n");
-        exit(-1);
-    }
+    if(cuda_ret != cudaSuccess){FATAL("Error freeing A_d");}
     cuda_ret = cudaFree(B_d);
-    if(cuda_ret != cudaSuccess)
-    {
-        printf("\nError freeing B_d\n");
-        exit(-1);
-    }
+    if(cuda_ret != cudaSuccess){FATAL("Error freeing B_d");}
     cuda_ret = cudaFree(C_d);
-    if(cuda_ret != cudaSuccess)
-    {
-        printf("\nError freeing C_d\n");
-        exit(-1);
-    }
+    if(cuda_ret != cudaSuccess){FATAL("Error freeing C_d");}
     //DONE
 
     return 0;
